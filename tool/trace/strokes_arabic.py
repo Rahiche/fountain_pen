@@ -21,9 +21,36 @@ from strokes_cjk import Graph
 
 # ط and ظ (alone and joined): the bowl, then the upright.
 UPRIGHT_LAST = {0x0637, 0x0638} | set(range(0xFEC1, 0xFEC9))
+# ع and غ joined from before (their last and middle forms): the loop a hand
+# writes as a crossed tie, not round the font's outline.
+CROSSED = {0xFECA, 0xFECC, 0xFECE, 0xFED0}
 
 
-def arabic_walk(g, upright_last=False):
+def line(a, b):
+    """Pixels from a to b, a step of about one at a time."""
+    n = max(1, int(max(abs(b[0] - a[0]), abs(b[1] - a[1]))))
+    return [(int(round(a[0] + (b[0] - a[0]) * k / n)), int(round(a[1] + (b[1] - a[1]) * k / n))) for k in range(1, n + 1)]
+
+
+def tie(loop, path):
+    """The loop as a hand crosses it: the pen, coming in from the right, turns
+    up at the loop's right edge, across to its top left, along its top, then
+    back down across that first stroke to its left edge, and on (path: the
+    pen's way so far, cut back to the loop's right edge). Returns the loop's
+    left edge, where the pen goes on from."""
+    ys = [q[0] for q in loop]
+    xs = [q[1] for q in loop]
+    top, bottom, left, right = min(ys), max(ys), min(xs), max(xs)
+    while len(path) > 1 and path[-1][1] < right:
+        path.pop()
+    p = path[-1]
+    for q in ((top, left), (top, right), (bottom, left)):
+        path += line(p, q)
+        p = q
+    return left
+
+
+def arabic_walk(g, upright_last=False, crossed=False):
     """The glyph's strokes (pixel paths), each from its right or top end."""
     es, ports = g.es, g.ports
     live = [i for i in range(len(es)) if i not in g.internal]
@@ -59,10 +86,19 @@ def arabic_walk(g, upright_last=False):
             es[i] = e[k:] + e[1:k + 1] if e[0] == e[-1] else e
             s = 0
         path = []
+        skip_right_of = None
         while True:
             used.add(i)
             e = es[i] if s == 0 else es[i][::-1]
-            path += e if not path else e[1:]
+            if skip_right_of is not None:
+                # (After a crossed loop: on from its left edge, not back to its fork.)
+                if e[-1][1] < skip_right_of:
+                    # (Leaving leftwards, on to the next letter: from where it passes the loop.)
+                    e = e[next(n for n, q in enumerate(e) if q[1] < skip_right_of):]
+                skip_right_of = None
+                path += e
+            else:
+                path += e if not path else e[1:]
             end = e[-1]
             if end not in g.deg:
                 break
@@ -78,7 +114,10 @@ def arabic_walk(g, upright_last=False):
                 if j in used:
                     continue
                 loop = es[j] if t == 0 else es[j][::-1]
-                path += loop[1:]
+                if crossed:
+                    skip_right_of = tie(loop, path)
+                else:
+                    path += loop[1:]
                 used.add(j)
             # Out to the tip of a short dead end and back.
             nxt = [(j, t, ang) for j, t, ang in nxt if j not in used]
@@ -136,7 +175,7 @@ def main():
             paths = []
             ems = [g.dot]
         else:
-            paths = arabic_walk(g, gm['code'] in UPRIGHT_LAST) if g.es else []
+            paths = arabic_walk(g, gm['code'] in UPRIGHT_LAST, gm['code'] in CROSSED) if g.es else []
             # (A main stroke found running rightwards, from a tail's tip to the
             # loop it closes (ف ق و), turned round to start at its head.)
             for k, q in enumerate(paths):
