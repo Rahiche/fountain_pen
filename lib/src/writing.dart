@@ -162,10 +162,13 @@ class PenWriting {
         }
 
         for (final s in g.strokes) {
-          final pts = [for (var j = 0; j + 2 < s.points.length; j += 3) place(s.points[j], s.points[j + 1])];
+          var pts = [for (var j = 0; j + 2 < s.points.length; j += 3) place(s.points[j], s.points[j + 1])];
           if (pts.isEmpty) continue;
-          // (Joined: on from where the last letter's stroke ended.)
+          // (Joined: on from where the last letter's stroke ended, and from
+          // the end of this one nearest it: a last alef, drawn up from where
+          // it joins.)
           final bridged = joins && !s.late && last != null;
+          if (bridged && (pts.last - last!).distance < (pts.first - last!).distance) pts = pts.reversed.toList();
           if (bridged) pts.insert(0, last!);
           final path = s.dot ? pts : (cjk ? _straight(pts, 1.2) : _smooth(pts, 1.2));
           final stroke =
