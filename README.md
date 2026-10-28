@@ -3,7 +3,7 @@
 Text written out by a fountain pen, stroke by stroke, in Flutter.
 
 <p align="center">
-  <img src="doc/paper.gif" alt="'This text is rendered with Flutter' written out by a fountain pen" width="720">
+  <img src="https://raw.githubusercontent.com/Rahiche/fountain_pen/main/doc/paper.gif" alt="'This text is rendered with Flutter' written out by a fountain pen" width="720">
 </p>
 
 Not a font fading in, and not one letter at a time: each letter is drawn the way a hand draws it, stroke after stroke, in the
@@ -12,15 +12,13 @@ a little where the pen lands. The hand slows into the turns and dots its i's onc
 quite the same: each is a little turned, sized, lifted and spaced its own way, and the line wanders.
 
 <p align="center">
-  <img src="doc/film.gif" alt="White ink on black paper, filmed from above as it's written" width="720">
+  <img src="https://raw.githubusercontent.com/Rahiche/fountain_pen/main/doc/film.gif" alt="White ink on black paper, filmed from above as it's written" width="720">
 </p>
 
 ## Use
 
-```yaml
-dependencies:
-  fountain_pen:
-    git: https://github.com/Rahiche/fountain_pen
+```sh
+flutter pub add fountain_pen
 ```
 
 ```dart

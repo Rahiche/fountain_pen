@@ -159,9 +159,8 @@ class PenFilm implements PenShot {
     final up = (vm.Vector3(0, 1, 0) * math.sin(elev) + vm.Vector3(0, 0, 1) * math.cos(elev))..normalize();
     final view = vm.makeViewMatrix(eye, target, up);
     final proj = vm.makePerspectiveMatrix(38 * math.pi / 180, size.width / size.height, 1, 1e5);
-    final port = vm.Matrix4.identity()
-      ..translateByVector3(vm.Vector3(size.width / 2, size.height / 2, 0))
-      ..scaleByVector3(vm.Vector3(size.width / 2, -size.height / 2, 1));
+    final port = vm.Matrix4.translationValues(size.width / 2, size.height / 2, 0)
+      ..multiply(vm.Matrix4.diagonal3Values(size.width / 2, -size.height / 2, 1));
     final m = port * proj * view * vm.Matrix4.diagonal3Values(1, -1, 1);
     bool front(Offset p) => view.transformed3(vm.Vector3(p.dx, -p.dy, 0)).z < -0.05 * d;
     canvas
