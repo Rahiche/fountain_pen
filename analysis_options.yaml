@@ -1,0 +1,9 @@
+include: package:lints/recommended.yaml
+
+analyzer:
+  exclude:
+    - lib/src/hands/*.dart
+    - build/**
+
+formatter:
+  page_width: 120

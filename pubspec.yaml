@@ -1,0 +1,20 @@
+name: fountain_pen
+description: Animate text as if a hand were writing it with a fountain pen, stroke by stroke, with nib contrast, wet ink and the irregularities of real handwriting.
+version: 0.1.0
+repository: https://github.com/Rahiche/fountain_pen
+issue_tracker: https://github.com/Rahiche/fountain_pen/issues
+topics: [animation, text, handwriting, calligraphy, painting]
+
+environment:
+  sdk: ^3.5.0
+  flutter: ">=3.24.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  vector_math: ^2.1.4
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  lints: ^5.0.0
