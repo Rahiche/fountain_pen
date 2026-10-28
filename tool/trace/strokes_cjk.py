@@ -17,7 +17,7 @@ order().
 
     python3 tool/trace/strokes_cjk.py <work dir>
 """
-import json, math, os, sys
+import json, math, os, sys, unicodedata
 import numpy as np
 from skeleton import depth, edges, prune, rdp, smooth, thin
 
@@ -155,6 +155,8 @@ def free_join(strokes):
                 if a is b:
                     continue
                 tol = 1.6 * (a.p[-1, 2] + b.p[0, 2]) + 0.015
+                if length(a) < 0.15 and length(b) < 0.15:
+                    continue  # (゛'s two ticks: two strokes)
                 for q in (b.p, b.p[::-1]):
                     if np.hypot(*(a.p[-1, :2] - q[0, :2])) > tol:
                         continue
@@ -738,9 +740,19 @@ def order(strokes, char):
     n = len(strokes)
     if n <= 1:
         return list(range(n))
+    # A voiced mark (゛ ゜) comes once the kana's written: its small strokes at
+    # the top right, left one first.
+    marks = []
+    if len(unicodedata.normalize('NFD', char)) > 1 and kind(char) in ('kana', 'kata'):
+        marks = sorted((i for i, s in enumerate(strokes) if box(s)[0] > 0.55 and box(s)[1] > 0.45 and length(s) < 0.3),
+                       key=lambda i: box(strokes[i])[0])
+    rest = [i for i in range(n) if i not in marks]
+    sub = [strokes[i] for i in rest]
     if kind(char) == 'kana' or kind(char) == 'free':
-        return order_kana(strokes)
-    return arrange(list(range(n)), strokes)
+        got = order_kana(sub)
+    else:
+        got = arrange(list(range(len(sub))), sub)
+    return [rest[i] for i in got] + marks
 
 
 def heading(s, along=0.15):
@@ -883,8 +895,8 @@ def frame(ids, st):
                 if C.segs[0].o == 'H' and len(C.segs) == 1 and abs(cy0 - fbot) < 0.07 and \
                         dist_to(C.start, A) < 0.05 and dist_to(C.end, B) < 0.05:
                     bottom.append(c)
-                elif cy0 > ftop - 0.03:
-                    above.append(c)
+                elif cy0 > ftop - 0.03 or cx1 < fx0 + 0.02:
+                    above.append(c)  # (above it, or to its left: 明's 日)
                 elif cx0 > fx0 - 0.02 and cx1 < fx1 + 0.02 and cy0 > fbot - 0.04:
                     inside.append(c)  # (由's middle, sticking up out of it, too)
                 else:
@@ -919,7 +931,10 @@ def interlock(ids, st):
                 h, v = (a, b) if oa == 'H' else (b, a) if ob == 'H' else (None, None)
                 if h is not None:
                     H, V = S[h], S[v]
-                    if S[v].segs[0].o == '/' and len(S[v].segs) == 1:
+                    along = float(np.hypot(*(x - H.start))) / max(length(H), 1e-6)
+                    if along < 0.15 and V.start[1] > H.start[1] + 0.05 and V.segs[0].o in '/V':
+                        before(v, h)
+                    elif S[v].segs[0].o == '/' and len(S[v].segs) == 1:
                         # 右 vs 左: the shorter of a sweep and a crossbar goes first.
                         lh = abs(H.end[0] - H.start[0])
                         lv = float(np.hypot(*(V.end - V.start)))
