@@ -355,13 +355,34 @@ class _Stroke {
                   math.sin(k * 1.7 + ph[2]) + 0.4 * math.sin(k * 3.9 + ph[3])) *
               (0.014 * xh * style.waver));
     }
-    // When each point's reached: slower in the turns, a little uneven.
+    // When each point's reached: as a hand moves, by the two-thirds power
+    // law (its speed falling with the curve's tightness, as curvature to the
+    // -1/3: quick along the straights, slow round the tight turns), easing
+    // up from rest and back down to it at the stroke's ends; a little uneven.
+    // At [v] on average.
     final speed = v * (0.88 + 0.24 * r.nextDouble());
+    final run = [0.0];
+    for (var i = 1; i < p.length; i++) {
+      run.add(run.last + (p[i] - p[i - 1]).distance);
+    }
+    final total = run.last, ramp = 0.3 * xh;
+    final bend = _bend(p, run, 0.04 * xh);
+    final pace = <double>[];
+    for (var i = 0; i < p.length; i++) {
+      final law = math.max(math.pow(1 / (xh * math.max(bend[i], 1 / (4 * xh))), 1 / 3).toDouble(), 0.3);
+      final end = math.min(run[i], total - run[i]) / ramp;
+      final ease = end >= 1 ? 1.0 : 0.25 + 0.75 * end * end * (3 - 2 * end);
+      pace.add(law * ease);
+    }
+    // (The same time over all as at [speed] throughout.)
+    var at = 0.0;
+    for (var i = 1; i < p.length; i++) {
+      at += (run[i] - run[i - 1]) / ((pace[i] + pace[i - 1]) / 2);
+    }
+    final scale = at > 0 && total > 0 ? at / total : 1.0;
     tt.add(0);
     for (var i = 1; i < p.length; i++) {
-      final a = i > 1 ? p[i - 1] - p[i - 2] : p[1] - p[0], b = p[i] - p[i - 1];
-      final turn = a.distance > 0 && b.distance > 0 ? 1 - (a.dx * b.dx + a.dy * b.dy) / (a.distance * b.distance) : 0.0;
-      tt.add(tt.last + b.distance / (speed * (1 - math.min(0.55, turn * 8))));
+      tt.add(tt.last + (run[i] - run[i - 1]) / (speed * (pace[i] + pace[i - 1]) / 2 * scale));
     }
     if (dot) tt.last = 0.05 * 3 * xh / math.max(v, 1e-6);
     // Its half-width along it: fine coming up, heavy going down (more so
@@ -387,6 +408,55 @@ class _Stroke {
       }
       half.add(dot ? xh * 0.11 : sum / n);
     }
+  }
+
+  /// How sharply [p] (its length so far at each point, [run]) bends at each
+  /// point, one over the radius: of it smoothed along its length by [sigma],
+  /// so a traced path's little jags aren't taken for turns.
+  static List<double> _bend(List<Offset> p, List<double> run, double sigma) {
+    final total = run.last;
+    if (p.length < 3 || total <= 0) return List.filled(p.length, 0);
+    // (Resampled evenly, smoothed with a bell, reflected at the ends.)
+    final n = math.max((total / (sigma / 4)).ceil(), 2) + 1, step = total / (n - 1);
+    final xy = <Offset>[];
+    for (var i = 0, j = 0; i < n; i++) {
+      final s = step * i;
+      while (j < p.length - 2 && run[j + 1] < s) {
+        j++;
+      }
+      final seg = run[j + 1] - run[j];
+      xy.add(Offset.lerp(p[j], p[j + 1], seg > 0 ? ((s - run[j]) / seg).clamp(0.0, 1.0) : 0)!);
+    }
+    final w = (3 * sigma / step).round();
+    final bell = [for (var k = -w; k <= w; k++) math.exp(-0.5 * math.pow(k * step / sigma, 2))];
+    final sum = bell.fold(0.0, (a, b) => a + b);
+    Offset at(int i) => i < 0
+        ? xy[0] * 2 - xy[math.min(-i, n - 1)]
+        : (i >= n ? xy[n - 1] * 2 - xy[math.max(2 * (n - 1) - i, 0)] : xy[i]);
+    final sm = [
+      for (var i = 0; i < n; i++)
+        () {
+          var o = Offset.zero;
+          for (var k = -w; k <= w; k++) {
+            o += at(i + k) * bell[k + w];
+          }
+          return o / sum;
+        }(),
+    ];
+    final k = List<double>.filled(n, 0);
+    for (var i = 1; i < n - 1; i++) {
+      final d = (sm[i + 1] - sm[i - 1]) / 2, dd = sm[i + 1] - sm[i] * 2 + sm[i - 1];
+      k[i] = (d.dx * dd.dy - d.dy * dd.dx).abs() / math.max(math.pow(d.distance, 3).toDouble(), 1e-18);
+    }
+    k[0] = k[1];
+    k[n - 1] = k[n - 2];
+    return [
+      for (final s in run)
+        () {
+          final f = (s / step).clamp(0.0, n - 1.0), i = math.min(f.floor(), n - 2);
+          return k[i] + (k[i + 1] - k[i]) * (f - i);
+        }(),
+    ];
   }
 
   final double xh;

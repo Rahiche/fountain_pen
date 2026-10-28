@@ -113,7 +113,9 @@ the word is written.
 `PenWriting` draws those lines with a nib, not with the font's own outlines:
 
 - **Width:** the line is broad going down and fine coming up, broader again across the nib's edge.
-- **Timing:** the pen's pace slows in the turns.
+- **Timing:** the pen moves as a hand does, by the two-thirds power law: quick along the straights, slower round the
+  tight turns (its speed falling as the curvature to the −1/3), setting off from rest and coming back to it at each
+  stroke's ends. `tool/eval/motor_law.py` measures it.
 - **Ink:** it feathers into the paper, dries darker at its edges, and catches the light while it's wet.
 
 ## Make your own hand

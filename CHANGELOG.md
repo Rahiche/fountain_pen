@@ -7,6 +7,8 @@
 - Arabic: `notoNaskhArabic`, a hand traced from Noto Naskh Arabic, with Persian's and Urdu's letters: written right to
   left, each letter in its joined form (`arabicShaped`), on to the next without the pen lifting, each word's dots once
   it's written.
+- The pen's pace follows the two-thirds power law of a moving hand: its speed falls with the curvature of its path, to
+  the −1/3, rather than only slowing in the turns. `tool/eval/motor_law.py` measures it in any pen's paths.
 - `PenHand.packed`: a hand of thousands of glyphs, each unpacked the first time it's written; a hand an app doesn't use
   is left out of it.
 - `tool/trace`: `cjk_glyphs.swift` and `strokes_cjk.py` trace a Japanese font of your own; `arabic_forms.py`,
