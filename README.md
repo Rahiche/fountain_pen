@@ -1,6 +1,7 @@
 # fountain_pen
 
-Text written out by a fountain pen, stroke by stroke, in Flutter.
+Text written out by a fountain pen, stroke by stroke, in Flutter: Latin; Japanese (kana and kanji, each stroke in the
+order a Japanese hand is taught); and Arabic, right to left, its letters joined.
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/Rahiche/fountain_pen/main/doc/paper.gif" alt="'This text is rendered with Flutter' written out by a fountain pen" width="720">
@@ -49,6 +50,45 @@ writing.paint(canvas, centre, t); // t: seconds into the writing
 
 The same `seed` writes the same way every time.
 
+### Japanese
+
+`notoSansJapanese` writes Japanese: hiragana and katakana, the 6,355 kanji of JIS X 0208, Japanese punctuation and
+full-width forms, and ASCII for the Latin in between.
+
+```dart
+FountainPenText('このテキストは\nFlutterで描画されています', hand: notoSansJapanese)
+```
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/Rahiche/fountain_pen/main/doc/paper_ja.gif" alt="'このテキストはFlutterで描画されています' written out by a fountain pen" width="720">
+</p>
+
+It's written the way a Japanese hand writes: each stroke on its own, the pen lifted and carried to the next, a finer
+nib, and horizontals rising a little to the right. Each character's strokes come in its stroke order (筆順): for kana,
+as taught; for kanji, by the rules a hand is taught (top before bottom, left before right, a crossbar before the
+vertical through it, a box's sides before what's in it and its bottom after, 辶 last, ...). Those rules cover the
+common kanji; a few thousand of them have exceptions the rules don't know, so a rare kanji may come out of order.
+
+The hand is about 1 MB of data, unpacked a character at a time as it's first written; an app that never uses it
+leaves it out.
+
+### Arabic
+
+`notoNaskhArabic` writes Arabic (and the extra letters of Persian and Urdu) right to left: each letter in the form its
+neighbours call for, joined on to the next without the pen lifting, and each word's dots and hamzas put in once the
+word's written.
+
+```dart
+FountainPenText('هذا النص\nمرسوم بفلاتر', hand: notoNaskhArabic)
+```
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/Rahiche/fountain_pen/main/doc/paper_ar.gif" alt="'هذا النص مرسوم بفلاتر' written out by a fountain pen" width="720">
+</p>
+
+A line runs right to left when its first letter is Arabic. Vowel marks are left out, and Latin within an Arabic line
+isn't reordered.
+
 ### Cameras
 
 Film the writing instead of just showing it. `PenShotView` plays any of these:
@@ -93,13 +133,35 @@ python3 tool/trace/to_dart.py tool/trace/work/strokes.json lib/src/hands/my_hand
 Then `FountainPenText('…', hand: myHand)`. Or skip the Dart step and load the JSON with `PenHand.fromJson`. To see a trace,
 run `cd tool/trace/work && python3 ../debug.py "abc" debug.ppm`: it draws each glyph's strokes in order over its raster.
 
+For an Arabic font, rasterise each letter's joined forms and trace them right to left:
+
+```sh
+python3 tool/trace/arabic_forms.py work/forms.tsv                           # each letter's forms, and how to shape them
+swift tool/trace/shaped_glyphs.swift path/to/Font.ttf work/forms.tsv work   # each form rasterised
+python3 tool/trace/strokes_arabic.py work                                  # strokes, right to left → strokes.json
+python3 tool/trace/to_packed.py work/strokes.json lib/src/hands/my_hand.dart myHand "My Font" "Licensed under …"
+```
+
+For a Japanese (or other CJK) font, trace it with the CJK tools. They work best with a font that, like Noto Sans JP,
+keeps each stroke as its own outline:
+
+```sh
+swift tool/trace/cjk_glyphs.swift path/to/Font.ttf chars.txt work 300      # each outline rasterised (weight 300)
+python3 tool/trace/strokes_cjk.py work                                    # strokes, in stroke order → strokes.json
+python3 tool/trace/to_packed.py work/strokes.json lib/src/hands/my_hand.dart myHand "My Font" "Licensed under …"
+swift tool/trace/order_sheet.swift work/strokes.json "永字八法" check.png   # each stroke numbered, to check
+```
+
 ## Limits
 
-- **Latin only, for now:** Basic Latin, which is what's traced. Characters a hand has no strokes for are left as spaces.
+- **Latin, Japanese and Arabic, for now:** Basic Latin; Japanese (`notoSansJapanese`); Arabic, with Persian's and
+  Urdu's letters (`notoNaskhArabic`). Characters a hand has no strokes for are left as spaces.
 - **No joins between letters:** letters connect only where the font's own strokes meet. Strokes aren't joined across
   letters.
 
 ## License
 
-Apache 2.0. See [LICENSE](LICENSE) and [NOTICE](NOTICE); the bundled hand is derived from Homemade Apple, © 2010 Font Diner,
-Inc., Apache 2.0.
+Apache 2.0. See [LICENSE](LICENSE) and [NOTICE](NOTICE); the Latin hand is derived from Homemade Apple, © 2010 Font Diner,
+Inc., Apache 2.0. The Japanese hand is derived from Noto Sans JP, © 2014-2021 Adobe, and like it is licensed under the
+SIL Open Font License 1.1 ([lib/src/hands/OFL.txt](lib/src/hands/OFL.txt)); so is the Arabic hand, derived from Noto
+Naskh Arabic, © 2014 Google Inc.

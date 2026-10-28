@@ -10,12 +10,32 @@ class ExampleApp extends StatelessWidget {
   Widget build(BuildContext context) => MaterialApp(
     title: 'fountain_pen',
     debugShowCheckedModeBanner: false,
-    theme: ThemeData(colorSchemeSeed: const Color(0xFF16204A), useMaterial3: true),
+    theme: ThemeData(
+      colorSchemeSeed: const Color(0xFF16204A),
+      useMaterial3: true,
+    ),
     home: const Demo(),
   );
 }
 
 enum Show { paper, closeUp, sky, low, orbit }
+
+/// What's written, in which hand.
+enum Script {
+  latin('Latin', 'This text is rendered\nwith Flutter'),
+  japanese('日本語', 'このテキストは\nFlutterで描画されています'),
+  arabic('العربية', 'هذا النص\nمرسوم بفلاتر');
+
+  const Script(this.label, this.sample);
+
+  final String label, sample;
+
+  PenHand get hand => switch (this) {
+    latin => homemadeApple,
+    japanese => notoSansJapanese,
+    arabic => notoNaskhArabic,
+  };
+}
 
 class Demo extends StatefulWidget {
   const Demo({super.key});
@@ -25,7 +45,8 @@ class Demo extends StatefulWidget {
 }
 
 class _DemoState extends State<Demo> {
-  final _text = TextEditingController(text: 'This text is rendered\nwith Flutter');
+  final _text = TextEditingController(text: Script.latin.sample);
+  var _script = Script.latin;
   var _show = Show.paper;
   var _take = 0;
 
@@ -36,7 +57,7 @@ class _DemoState extends State<Demo> {
   }
 
   Widget _stage() {
-    final text = _text.text;
+    final text = _text.text, hand = _script.hand;
     switch (_show) {
       case Show.paper:
         return ColoredBox(
@@ -45,16 +66,35 @@ class _DemoState extends State<Demo> {
             child: Padding(
               padding: const EdgeInsets.all(32),
               child: LayoutBuilder(
-                builder: (context, box) => FountainPenText(text, key: ValueKey(_take), fontSize: 64, maxWidth: box.maxWidth),
+                builder: (context, box) => FountainPenText(
+                  text,
+                  key: ValueKey(_take),
+                  hand: hand,
+                  fontSize: 64,
+                  maxWidth: box.maxWidth,
+                ),
               ),
             ),
           ),
         );
       case Show.closeUp:
-        return PenShotView(PenCloseUp(PenWriting(text, fontSize: 64)), key: ValueKey(_take));
+        return PenShotView(
+          PenCloseUp(PenWriting(text, hand: hand, fontSize: 64)),
+          key: ValueKey(_take),
+        );
       case Show.sky || Show.low || Show.orbit:
-        final angle = {Show.sky: PenFilmAngle.sky, Show.low: PenFilmAngle.low, Show.orbit: PenFilmAngle.orbit}[_show]!;
-        return PenShotView(PenFilm(PenWriting(text, fontSize: 64, ink: PenInk.white), angle: angle), key: ValueKey(_take));
+        final angle = {
+          Show.sky: PenFilmAngle.sky,
+          Show.low: PenFilmAngle.low,
+          Show.orbit: PenFilmAngle.orbit,
+        }[_show]!;
+        return PenShotView(
+          PenFilm(
+            PenWriting(text, hand: hand, fontSize: 64, ink: PenInk.white),
+            angle: angle,
+          ),
+          key: ValueKey(_take),
+        );
     }
   }
 
@@ -71,9 +111,25 @@ class _DemoState extends State<Demo> {
                 child: TextField(
                   controller: _text,
                   maxLines: 2,
-                  decoration: const InputDecoration(labelText: 'Text (Latin)', border: OutlineInputBorder()),
+                  decoration: const InputDecoration(
+                    labelText: 'Text',
+                    border: OutlineInputBorder(),
+                  ),
                   onSubmitted: (_) => setState(() => _take++),
                 ),
+              ),
+              const SizedBox(width: 12),
+              SegmentedButton<Script>(
+                segments: [
+                  for (final s in Script.values)
+                    ButtonSegment(value: s, label: Text(s.label)),
+                ],
+                selected: {_script},
+                onSelectionChanged: (s) => setState(() {
+                  _script = s.first;
+                  _text.text = _script.sample;
+                  _take++;
+                }),
               ),
               const SizedBox(width: 12),
               SegmentedButton<Show>(

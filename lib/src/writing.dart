@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'dart:ui';
 
+import 'arabic.dart';
 import 'hand.dart';
 import 'hands/homemade_apple.dart';
 import 'ink.dart';
@@ -15,8 +16,10 @@ enum PenAlign { start, center }
 /// turned, sized, lifted and spaced its own way, the line wandering, the
 /// hand wavering (all from [seed], so the same seed writes the same way).
 ///
-/// Paint it as written by any moment with [paint]. Latin text: characters
-/// the hand has no strokes for are left as spaces.
+/// Paint it as written by any moment with [paint]. Characters the hand has
+/// no strokes for are left as spaces. Japanese is written a stroke at a time,
+/// the pen lifted between; Arabic right to left, its letters joined (see
+/// [arabicShaped]), each word's dots once it's written.
 class PenWriting {
   PenWriting(
     this.text, {
@@ -30,7 +33,7 @@ class PenWriting {
     this.align = PenAlign.center,
     this.seed = 7,
   }) {
-    final widths = [for (final line in text.split('\n')) _width(line)];
+    final widths = [for (final line in _lines) _width(line.chars)];
     final widest = widths.isEmpty ? 0.0 : widths.reduce(math.max);
     em = maxWidth == null || widest <= 0 ? fontSize : math.min(fontSize, maxWidth / widest);
     _layout(speed);
@@ -48,6 +51,7 @@ class PenWriting {
   void _relayout(double speed) {
     _strokes.clear();
     _lineMid.clear();
+    _lineRtl.clear();
     _track = null;
     _boundsCache = null;
     _layout(speed);
@@ -72,6 +76,7 @@ class PenWriting {
 
   final _strokes = <_Stroke>[];
   final _lineMid = <double>[];
+  final _lineRtl = <bool>[];
 
   /// Where the ink reaches, round the point [paint] centres it on.
   Rect get bounds => _boundsCache ??= _bounds();
@@ -80,26 +85,43 @@ class PenWriting {
   /// The size it takes up, written.
   Size get size => bounds.size;
 
-  double _width(String line) => line.split('').fold(0.0, (w, ch) => w + (hand.glyphs[ch]?.advance ?? hand.space));
+  double _width(List<String> chars) => chars.fold(0.0, (w, ch) => w + (hand.glyphs[ch]?.advance ?? _gap(ch)));
+
+  /// Each line as it's written: its characters (Arabic's joined), whether
+  /// each joins on to the next, and whether the line runs right to left.
+  List<({List<String> chars, List<bool> joined, bool rtl})> get _lines => [
+        for (final line in text.split('\n'))
+          if (isRightToLeft(line))
+            (chars: arabicShaped(line).text.split(''), joined: arabicShaped(line).joined, rtl: true)
+          else
+            (chars: line.split(''), joined: List.filled(line.length, false), rtl: false),
+      ];
+
+  /// How far on a character the hand doesn't write moves the pen: a space
+  /// (an em for Japanese's full-width one).
+  double _gap(String ch) => ch == '\u3000' ? 1.0 : hand.space;
 
   void _layout(double speed) {
     final r = math.Random(seed);
     double rnd() => r.nextDouble() * 2 - 1;
     // (Pauses as quick as the writing: a hand in a hurry pauses less.)
     final pause = 3 / speed;
-    final lines = text.split('\n');
+    final lines = _lines;
     final x = hand.xHeight, xh = x * em;
-    final widest = lines.map(_width).fold(0.0, math.max);
+    final widest = lines.map((l) => _width(l.chars)).fold(0.0, math.max);
     var t = 0.0;
     Offset? last;
     for (final (k, line) in lines.indexed) {
-      final chars = line.split('');
+      final chars = line.chars, rtl = line.rtl;
       final gaps = [for (var i = 0; i < chars.length; i++) 0.02 * rnd()];
-      final width = _width(line) + gaps.fold(0.0, (a, b) => a + b);
+      final width = _width(chars) + gaps.fold(0.0, (a, b) => a + b);
       final baseline = (k - (lines.length - 1) / 2) * lineHeight * em + xh / 2;
       _lineMid.add(baseline - xh / 2);
+      _lineRtl.add(rtl);
       final tilt = 0.015 * rnd(), wave = r.nextDouble() * 6;
-      var pen = align == PenAlign.center ? -width / 2 : -widest / 2;
+      // (Right to left: from the right, each letter placed before the pen.)
+      final side = rtl ? -1 : 1;
+      var pen = side * -(align == PenAlign.center ? width : widest) / 2;
       final late = <_Stroke>[];
       void dots() {
         for (final s in late) {
@@ -117,15 +139,23 @@ class PenWriting {
         if (g == null) {
           dots();
           t += 0.07 * pause;
-          pen += hand.space + gaps[i];
+          pen += side * (_gap(ch) + gaps[i]);
           continue;
         }
-        // This letter its own way: turned, sized, lifted a little.
-        final rot = 0.04 * rnd() * ink.waver, scale = 1 + 0.045 * rnd() * ink.waver;
-        final lift = (0.025 * rnd() + 0.03 * math.sin(pen * 1.1 + wave)) * ink.waver;
-        final cx = g.advance / 2, cy = x / 2;
+        if (rtl) pen -= g.advance + gaps[i];
+        // Arabic: joined on from the letter before, the pen not lifted.
+        var joins = rtl && i > 0 && line.joined[i - 1];
+        // Japanese: every stroke its own, the pen lifted and carried to the
+        // next; a finer nib; a hand's horizontals rising a little to the right.
+        final cjk = _cjk(ch);
+        // This letter its own way: turned, sized, lifted a little (joined
+        // letters, less: they stay on their line).
+        final steady = rtl ? 0.3 : 1.0;
+        final rot = 0.04 * rnd() * ink.waver * steady, scale = 1 + 0.045 * rnd() * ink.waver * steady;
+        final lift = (0.025 * rnd() * steady + 0.03 * math.sin(pen * 1.1 + wave)) * ink.waver;
+        final cx = g.advance / 2, cy = cjk ? 0.38 : x / 2, rise = cjk ? 0.06 + 0.02 * rnd() : 0.0;
         Offset place(double px, double py) {
-          final dx = (px - cx) * scale, dy = (py - cy) * scale;
+          final dx = (px - cx) * scale, dy = (py + rise * (px - cx) - cy) * scale;
           final ux = cx + dx * math.cos(rot) - dy * math.sin(rot),
               uy = cy + dx * math.sin(rot) + dy * math.cos(rot) + lift;
           return Offset((pen + ux) * em, baseline - (uy + (pen + ux) * tilt * ink.waver) * em);
@@ -134,23 +164,40 @@ class PenWriting {
         for (final s in g.strokes) {
           final pts = [for (var j = 0; j + 2 < s.points.length; j += 3) place(s.points[j], s.points[j + 1])];
           if (pts.isEmpty) continue;
-          final stroke = _Stroke(s.dot ? pts : _smooth(pts, 1.2), xh, speed * em, ink, r, dot: s.dot);
+          // (Joined: on from where the last letter's stroke ended.)
+          final bridged = joins && !s.late && last != null;
+          if (bridged) pts.insert(0, last!);
+          final path = s.dot ? pts : (cjk ? _straight(pts, 1.2) : _smooth(pts, 1.2));
+          final stroke =
+              _Stroke(path, xh, speed * em, ink, r, dot: s.dot, nib: cjk ? _Nib.fine : (rtl ? _Nib.level : _Nib.broad));
           if (s.late) {
             late.add(stroke);
             continue;
           }
+          if (cjk) {
+            // (Lifted, and carried over to where the next stroke starts.)
+            final carry = last == null ? 0.0 : (pts.first - last!).distance / em;
+            stroke.lands = true;
+            stroke.t0 = t + (0.05 + 0.03 * r.nextDouble() + 0.12 * carry) * pause;
+            t = stroke.t0 + stroke.time;
+            last = stroke.p.last;
+            _strokes.add(stroke);
+            continue;
+          }
           // On from where it was, or from ink this letter's already laid (a
-          // fork the trace split at): no lift, no pool.
+          // fork the trace split at), or joined: no lift, no pool.
           final from = pts.first;
-          final on = (last != null && (from - last!).distance < 0.05 * em) ||
+          final on = bridged ||
+              (last != null && (from - last!).distance < 0.05 * em) ||
               _strokes.reversed.take(4).any((o) => o.p.any((q) => (q - from).distance < 0.04 * em));
+          joins = false;
           stroke.lands = !on;
           stroke.t0 = on ? t : t + (0.03 + 0.03 * r.nextDouble()) * pause;
           t = stroke.t0 + stroke.time;
           last = stroke.p.last;
           _strokes.add(stroke);
         }
-        pen += g.advance + gaps[i];
+        if (!rtl) pen += g.advance + gaps[i];
       }
       dots();
       if (k < lines.length - 1) t += 0.15 * pause;
@@ -171,6 +218,30 @@ class PenWriting {
     }
     final pad = hand.xHeight * em * (ink.fine + ink.heavy) + 2;
     return Rect.fromLTRB(l - pad, tp - pad, rt + pad, b + pad);
+  }
+
+  /// Whether [ch] is written as Japanese is: kana, kanji, their punctuation
+  /// and full-width forms.
+  static bool _cjk(String ch) {
+    final c = ch.codeUnitAt(0);
+    return (c >= 0x3000 && c <= 0x30FF) ||
+        (c >= 0x3400 && c <= 0x9FFF) ||
+        (c >= 0xF900 && c <= 0xFAFF) ||
+        (c >= 0xFF00 && c <= 0xFFEF);
+  }
+
+  /// [p] with a point every [step] px along its straight runs: its corners
+  /// kept sharp.
+  static List<Offset> _straight(List<Offset> p, double step) {
+    if (p.length < 2) return p;
+    final out = <Offset>[p.first];
+    for (var i = 0; i + 1 < p.length; i++) {
+      final n = math.max(1, ((p[i + 1] - p[i]).distance / step).ceil());
+      for (var k = 1; k <= n; k++) {
+        out.add(Offset.lerp(p[i], p[i + 1], k / n)!);
+      }
+    }
+    return out;
   }
 
   /// A smooth line through [p] (Catmull-Rom), a point every [step] px.
@@ -229,7 +300,7 @@ class PenWriting {
         line = k;
         far = p.dx;
       }
-      far = math.max(far, p.dx);
+      far = _lineRtl[k] ? math.min(far, p.dx) : math.max(far, p.dx);
       raw.add(Offset(far, _lineMid.isEmpty ? 0 : _lineMid[k]));
     }
     if (raw.length < 2) raw.add(raw.isEmpty ? Offset.zero : raw.first);
@@ -262,8 +333,12 @@ class PenWriting {
   }
 }
 
+/// The nib a stroke's written with: a broad one (Latin), a fine one
+/// (Japanese), or one broadest along the line (Arabic).
+enum _Nib { broad, fine, level }
+
 class _Stroke {
-  _Stroke(List<Offset> pts, this.xh, double v, this.style, math.Random r, {this.dot = false})
+  _Stroke(List<Offset> pts, this.xh, double v, this.style, math.Random r, {this.dot = false, _Nib nib = _Nib.broad})
       : ink = Color.lerp(
             style.color, style.isLight ? const Color(0xFFD8CDB8) : const Color(0xFF070B1E), 0.3 * r.nextDouble())! {
     // The hand wavers: a slow drift off the line, its own for each stroke.
@@ -287,16 +362,19 @@ class _Stroke {
     }
     if (dot) tt.last = 0.05 * 3 * xh / math.max(v, 1e-6);
     // Its half-width along it: fine coming up, heavy going down (more so
-    // across the nib's edge), pressed a little unevenly; smoothed.
+    // across the nib's edge), pressed a little unevenly; smoothed. (A fine
+    // nib, for Japanese: less between its finest and its broadest. Arabic's
+    // pen: broadest along the line, finer down it.)
     final q = r.nextDouble() * 6.3, raw = <double>[];
+    final hair = style.fine * switch (nib) { _Nib.fine => 2.2, _Nib.level => 1.5, _Nib.broad => 1.0 };
+    final press = style.heavy * switch (nib) { _Nib.fine => 0.45, _Nib.level => 0.75, _Nib.broad => 1.0 };
     for (var i = 0; i < p.length; i++) {
       final d = i + 1 < p.length ? p[i + 1] - p[i] : (i > 0 ? p[i] - p[i - 1] : const Offset(0, 1));
       final len = math.max(d.distance, 1e-6);
-      final down = (d.dy / len).clamp(0.0, 1.0);
+      final down = (d.dy / len).clamp(0.0, 1.0), level = d.dx.abs() / len;
       final across = ((d.dx * math.sin(style.nibAngle) + d.dy * math.cos(style.nibAngle)) / len).abs();
-      raw.add(xh *
-          (style.fine + style.heavy * (0.7 * down * down + 0.3 * across) * (0.85 + 0.15 * math.sin(i * 0.035 + q))) /
-          2);
+      final weight = nib == _Nib.level ? 0.65 * level * level + 0.35 * down * down : 0.7 * down * down + 0.3 * across;
+      raw.add(xh * (hair + press * weight * (0.85 + 0.15 * math.sin(i * 0.035 + q))) / 2);
     }
     for (var i = 0; i < raw.length; i++) {
       var sum = 0.0, n = 0;

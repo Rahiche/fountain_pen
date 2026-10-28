@@ -5,3 +5,13 @@ The bundled hand (lib/src/hands/homemade_apple.dart) is traced from the
 Homemade Apple font, Copyright (c) 2010 by Font Diner, Inc., licensed under
 the Apache License, Version 2.0. "Homemade Apple" is a trademark of
 Font Diner, Inc.
+
+The Japanese hand (lib/src/hands/noto_sans_japanese.dart) is traced from the
+Noto Sans JP font, Copyright 2014-2021 Adobe (http://www.adobe.com/), with
+Reserved Font Name 'Source'. As a Modified Version of that font it is licensed
+under the SIL Open Font License, Version 1.1 (lib/src/hands/OFL.txt), not the
+Apache License that covers the rest of this package.
+
+The Arabic hand (lib/src/hands/noto_naskh_arabic.dart) is traced from the Noto
+Naskh Arabic font, Copyright 2014 Google Inc. All Rights Reserved. It too is
+licensed under the SIL Open Font License, Version 1.1 (lib/src/hands/OFL.txt).

@@ -1,3 +1,17 @@
+## 0.2.0
+
+- Japanese: `notoSansJapanese`, a hand traced from Noto Sans JP: hiragana and katakana, the 6,355 kanji of JIS X 0208,
+  Japanese punctuation and full-width forms, and ASCII, each written stroke by stroke in its stroke order (筆順). Written
+  as a Japanese hand writes: a finer nib, the pen lifted and carried between strokes, horizontals rising a little to
+  the right.
+- Arabic: `notoNaskhArabic`, a hand traced from Noto Naskh Arabic, with Persian's and Urdu's letters: written right to
+  left, each letter in its joined form (`arabicShaped`), on to the next without the pen lifting, each word's dots once
+  it's written.
+- `PenHand.packed`: a hand of thousands of glyphs, each unpacked the first time it's written; a hand an app doesn't use
+  is left out of it.
+- `tool/trace`: `cjk_glyphs.swift` and `strokes_cjk.py` trace a Japanese font of your own; `arabic_forms.py`,
+  `shaped_glyphs.swift` and `strokes_arabic.py` an Arabic one; `to_packed.py` packs either.
+
 ## 0.1.0
 
 - `FountainPenText`: text written out by a fountain pen, stroke by stroke.

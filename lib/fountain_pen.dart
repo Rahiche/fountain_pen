@@ -7,8 +7,11 @@
 library;
 
 export 'src/camera.dart';
+export 'src/arabic.dart' show arabicShaped, isRightToLeft;
 export 'src/hand.dart';
 export 'src/hands/homemade_apple.dart' show homemadeApple;
+export 'src/hands/noto_naskh_arabic.dart' show notoNaskhArabic;
+export 'src/hands/noto_sans_japanese.dart' show notoSansJapanese;
 export 'src/ink.dart';
 export 'src/widgets.dart';
 export 'src/writing.dart';
