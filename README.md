@@ -1,7 +1,10 @@
 # fountain_pen
 
 Text written out by a fountain pen, stroke by stroke, in Flutter: Latin; Japanese (kana and kanji, each stroke in the
-order a Japanese hand is taught); and Arabic, right to left, its letters joined.
+order a Japanese hand is taught); and Arabic, Persian and Urdu, right to left, their letters joined.
+
+**[Try it in your browser](https://rahiche.github.io/fountain_pen/)**: every hand and camera, with a playground for
+your own text, ink and nib.
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/Rahiche/fountain_pen/main/doc/paper.gif" alt="'This text is rendered with Flutter' written out by a fountain pen" width="720">
@@ -50,6 +53,23 @@ writing.paint(canvas, centre, t); // t: seconds into the writing
 
 The same `seed` writes the same way every time.
 
+### Inks, nibs and hands
+
+`PenInk` is the pen and its ink: the colour, how broad the nib's downstrokes are against its hairlines, and how much the
+hand wavers. Each `seed` is a different hand writing the same words.
+
+```dart
+FountainPenText('sepia', ink: const PenInk(color: Color(0xFF5B3A1E)))
+FountainPenText('broad nib', ink: const PenInk(heavy: 0.36, fine: 0.05))
+FountainPenText('steady hand', ink: const PenInk(waver: 0))
+FountainPenText('Never quite the same twice', seed: 3)
+```
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/Rahiche/fountain_pen/main/doc/inks.gif" alt="Six inks and nibs, each writing its own name" width="360">
+  <img src="https://raw.githubusercontent.com/Rahiche/fountain_pen/main/doc/seeds.gif" alt="The same line in four seeds: four hands" width="360">
+</p>
+
 ### Japanese
 
 `notoSansJapanese` writes Japanese: hiragana and katakana, the 6,355 kanji of JIS X 0208, Japanese punctuation and
@@ -86,6 +106,16 @@ FountainPenText('هذا النص\nمرسوم بفلاتر', hand: notoNaskhArabi
   <img src="https://raw.githubusercontent.com/Rahiche/fountain_pen/main/doc/paper_ar.gif" alt="'هذا النص مرسوم بفلاتر' written out by a fountain pen" width="720">
 </p>
 
+Persian and Urdu are written with the same hand, their own letters included:
+
+```dart
+FountainPenText('یہ تحریر قلم سے\nلکھی گئی ہے', hand: notoNaskhArabic)
+```
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/Rahiche/fountain_pen/main/doc/paper_ur.gif" alt="'یہ تحریر قلم سے لکھی گئی ہے' (Urdu: this was written with a pen) written out by a fountain pen" width="720">
+</p>
+
 A line runs right to left when its first letter is Arabic. Vowel marks are left out, and Latin within an Arabic line
 isn't reordered.
 
@@ -102,6 +132,24 @@ Film the writing instead of just showing it. `PenShotView` plays any of these:
 ```dart
 PenShotView(PenFilm(PenWriting('Every letter goes on a journey', ink: PenInk.white), angle: PenFilmAngle.low))
 ```
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/Rahiche/fountain_pen/main/doc/closeup.gif" alt="PenCloseUp: close on the pen, then easing out to the whole line" width="360">
+  <img src="https://raw.githubusercontent.com/Rahiche/fountain_pen/main/doc/film_low.gif" alt="PenFilm, low along the line" width="360">
+</p>
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/Rahiche/fountain_pen/main/doc/film_orbit.gif" alt="PenFilm, in an orbit round the pen" width="360">
+  <img src="https://raw.githubusercontent.com/Rahiche/fountain_pen/main/doc/film_ja.gif" alt="Japanese filmed from the sky" width="360">
+</p>
+
+Any hand can be filmed. Arabic, from the sky:
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/Rahiche/fountain_pen/main/doc/film_ar.gif" alt="Arabic, filmed from the sky as it's written" width="360">
+</p>
+
+To make these again, `sh tool/demo/make_gifs.sh` renders every demo and turns it into `doc/*.gif`.
 
 ## How it works
 
