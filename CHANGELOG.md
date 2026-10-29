@@ -1,3 +1,8 @@
+## 0.2.1
+
+- A shorter README: what it does, demos and links. The details move to their own pages: getting started, inks
+  and cameras, Japanese and Arabic, and how it works (in `doc/`), and tracing your own hand (`tool/trace`).
+
 ## 0.2.0
 
 - Japanese: `notoSansJapanese`, a hand traced from Noto Sans JP: hiragana and katakana, the 6,355 kanji of JIS X 0208,

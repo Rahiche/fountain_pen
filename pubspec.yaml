@@ -1,6 +1,6 @@
 name: fountain_pen
 description: Animate text as if a hand were writing it with a fountain pen, stroke by stroke, in Latin, Japanese or Arabic, with wet ink and a real hand's irregularities.
-version: 0.2.0
+version: 0.2.1
 repository: https://github.com/Rahiche/fountain_pen
 issue_tracker: https://github.com/Rahiche/fountain_pen/issues
 topics: [animation, text, handwriting, calligraphy, japanese]
