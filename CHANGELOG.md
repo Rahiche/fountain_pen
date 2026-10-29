@@ -13,6 +13,8 @@
   is left out of it.
 - `tool/trace`: `cjk_glyphs.swift` and `strokes_cjk.py` trace a Japanese font of your own; `arabic_forms.py`,
   `shaped_glyphs.swift` and `strokes_arabic.py` an Arabic one; `to_packed.py` packs either.
+- The example is a gallery of every hand and camera, with a playground; it runs on the web at
+  https://rahiche.github.io/fountain_pen/.
 
 ## 0.1.0
 

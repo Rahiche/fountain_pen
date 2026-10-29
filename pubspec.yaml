@@ -7,8 +7,15 @@ topics: [animation, text, handwriting, calligraphy, japanese]
 screenshots:
   - description: A line written out by a fountain pen, stroke by stroke.
     path: doc/paper.gif
+  - description: Japanese, written stroke by stroke in its stroke order.
+    path: doc/paper_ja.gif
+  - description: Arabic, written right to left, its letters joined without the pen lifting.
+    path: doc/paper_ar.gif
   - description: White ink on black paper, filmed by a camera that follows the pen.
     path: doc/film.gif
+# (The packed Japanese hand's base64 reads to pub's scanner like a key.)
+false_secrets:
+  - /lib/src/hands/noto_sans_japanese.dart
 
 environment:
   sdk: ^3.6.0

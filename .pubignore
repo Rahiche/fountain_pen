@@ -9,5 +9,10 @@ pubspec.lock
 .DS_Store
 tool/trace/work/
 
-# Linked from the README by URL: not needed in the package.
-doc/
+# Linked from the README by URL: not needed in the package, but for the
+# GIFs pub.dev shows as screenshots (pubspec.yaml).
+doc/*
+!doc/paper.gif
+!doc/paper_ja.gif
+!doc/paper_ar.gif
+!doc/film.gif
